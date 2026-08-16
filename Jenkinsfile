@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         APP_NAME = "jenkins-multibranch-demo"
+        ACR_LOGIN_SERVER = "jenkinslabacrbr9lbn.azurecr.io"
     }
 
     stages {
@@ -22,6 +23,23 @@ pipeline {
                 sh """
                     docker build -t ${APP_NAME}:${BUILD_NUMBER} .
                 """
+            }
+        }
+        stage('Docker Push') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'acr-credentials',
+                        usernameVariable: 'ACR_USERNAME',
+                        passwordVariable: 'ACR_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        docker tag $APP_NAME:$BUILD_NUMBER $ACR_LOGIN_SERVER/$APP_NAME:$BRANCH_NAME-$BUILD_NUMBER
+                        docker login $ACR_LOGIN_SERVER -u $ACR_USERNAME -p $ACR_PASSWORD
+                        docker push $ACR_LOGIN_SERVER/$APP_NAME:$BRANCH_NAME-$BUILD_NUMBER
+                    '''
+                }
             }
         }
         stage('Deploy DEV') {
