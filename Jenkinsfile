@@ -1,14 +1,15 @@
 pipeline {
-    agent any
+    agent { label 'docker-agent' }
+
+    environment {
+        APP_NAME = "jenkins-multibranch-demo"
+    }
+
     stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out source code"
-            }
-        }
         stage('Build') {
             steps {
                 echo "Building application"
+                echo "Branch: ${env.BRANCH_NAME}"
             }
         }
         stage('Test') {
@@ -18,13 +19,22 @@ pipeline {
         }
         stage('Docker Build') {
             steps {
-                echo "Building Docker image"
+                sh """
+                    docker build -t ${APP_NAME}:${BUILD_NUMBER} .
+                """
             }
         }
-        stage('Deploy') {
-            steps {
-                echo "Deploying application"
-            }
+        stage('Deploy DEV') {
+            when { branch 'dev' }
+            steps { echo "Deploying to DEV environment" }
+        }
+        stage('Deploy UAT') {
+            when { branch 'uat' }
+            steps { echo "Deploying to UAT environment" }
+        }
+        stage('Deploy PROD') {
+            when { branch 'prod' }
+            steps { echo "Deploying to PROD environment" }
         }
     }
 }
